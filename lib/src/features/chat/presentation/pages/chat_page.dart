@@ -1,0 +1,153 @@
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:friendify/src/features/auth/presentation/widgets/neon_text_field.dart';
+
+class ChatPage extends StatefulWidget {
+  final String targetUserId;
+  final String targetUserName;
+
+  const ChatPage({
+    super.key, 
+    required this.targetUserId,
+    required this.targetUserName
+  });
+
+  @override
+  State<ChatPage> createState() => _ChatPageState();
+}
+
+class _ChatPageState extends State<ChatPage> {
+  final _messageController = TextEditingController();
+  late final Stream<List<Map<String, dynamic>>> _messagesStream;
+  final _myId = Supabase.instance.client.auth.currentUser!.id;
+
+  @override
+  void initState() {
+    super.initState();
+    _messagesStream = Supabase.instance.client
+        .from('messages')
+        .stream(primaryKey: ['id'])
+        .order('created_at', ascending: false) // Sort by NEWEST FIRST
+        .map((maps) => maps.where((msg) {
+              final sender = msg['sender_id'];
+              final receiver = msg['receiver_id'];
+              return (sender == _myId && receiver == widget.targetUserId) ||
+                     (sender == widget.targetUserId && receiver == _myId);
+            }).toList());
+  }
+
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+    _messageController.clear();
+
+    try {
+      await Supabase.instance.client.from('messages').insert({
+        'sender_id': _myId,
+        'receiver_id': widget.targetUserId,
+        'content': text,
+      });
+
+      // GHOST REPLY LOGIC (Fake AI)
+      // If we are sending to a ghost (Luna, Neon, Star), they reply!
+      // In a real app, this would be a server-side Edge Function.
+      await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
+      
+      final replies = [
+        "That's awesome! ⚡",
+        "Tell me more about that.",
+        "I was just thinking the same thing!",
+        "Haha totally.",
+        "When are we meeting up?",
+        "Do you like sushi? 🍣",
+        "Let's ride! 🏍️"
+      ];
+      
+      await Supabase.instance.client.from('messages').insert({
+        'sender_id': widget.targetUserId,
+        'receiver_id': _myId,
+        'content': (replies..shuffle()).first,
+      });
+
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to send')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.targetUserName),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _messagesStream,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final messages = snapshot.data!;
+                if (messages.isEmpty) {
+                  return const Center(child: Text("Say Hello! 👋", style: TextStyle(color: Colors.white54)));
+                }
+                
+                return ListView.builder(
+                  reverse: true, // Newest at bottom visually
+                  padding: const EdgeInsets.all(16),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = messages[index];
+                    final isMe = msg['sender_id'] == _myId;
+                    
+                    return Align(
+                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isMe ? const Color(0xFFD4FF00) : Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          msg['content'],
+                          style: TextStyle(
+                            color: isMe ? Colors.black : Colors.white,
+                            fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: NeonTextField(
+                    controller: _messageController,
+                    label: "Type a message...",
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: _sendMessage,
+                  icon: const Icon(Icons.send, color: Color(0xFFD4FF00)),
+                )
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}

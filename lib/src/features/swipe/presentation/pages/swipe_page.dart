@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:friendify/src/core/models/profile.dart';
-import 'package:friendify/src/core/services/mock_profile_service.dart';
 import 'package:friendify/src/features/swipe/presentation/widgets/profile_card.dart';
 import 'package:friendify/src/features/profile/presentation/pages/profile_page.dart';
+import 'package:friendify/src/features/chat/presentation/pages/chat_list_page.dart';
+
+import 'package:friendify/src/core/services/supabase_profile_service.dart';
+import 'package:friendify/src/core/services/match_service.dart';
 
 class SwipePage extends StatefulWidget {
   const SwipePage({super.key});
@@ -14,7 +17,8 @@ class SwipePage extends StatefulWidget {
 
 class _SwipePageState extends State<SwipePage> {
   final CardSwiperController controller = CardSwiperController();
-  final MockProfileService _service = MockProfileService();
+  final SupabaseProfileService _service = SupabaseProfileService();
+  final MatchService _matchService = MatchService();
   List<Profile> _profiles = [];
   bool _isLoading = true;
 
@@ -39,9 +43,18 @@ class _SwipePageState extends State<SwipePage> {
   ) {
     debugPrint('The card $previousIndex was swiped to the ${direction.name}. Now $currentIndex');
     
-    // TODO: Implement Supabase match logic here
     if (direction == CardSwiperDirection.right) {
-       // It's a like!
+       final likedProfile = _profiles[previousIndex];
+       _matchService.recordLike(likedProfile.id);
+       
+       ScaffoldMessenger.of(context).showSnackBar(
+         SnackBar(
+           content: Text("You liked ${likedProfile.name}!"), 
+           duration: const Duration(milliseconds: 500),
+           backgroundColor: const Color(0xFFD4FF00),
+           behavior: SnackBarBehavior.floating,
+         )
+       );
     }
     
     return true;
@@ -68,6 +81,12 @@ class _SwipePageState extends State<SwipePage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFF38BDF8)), // Moonlight Blue
+            onPressed: () {
+               Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatListPage()));
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.person, color: Color(0xFFD4FF00)),
             onPressed: () {
