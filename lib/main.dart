@@ -55,6 +55,24 @@ class FriendifyApp extends StatelessWidget {
           iconTheme: IconThemeData(color: Colors.black),
         ),
       ),
+      // GLOBAL GRADIENT FIX: Applies to ALL screens (Auth, Main, Settings, etc.)
+      builder: (context, child) {
+        return Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.white,
+                 Color(0xFFF3FFCC), // Very light lime tint
+                Color(0xFFD4FF00), // Neon Lime at bottom
+              ],
+              stops: [0.0, 0.7, 1.0],
+            ),
+          ),
+          child: child,
+        );
+      },
       home: const AuthGate(),
     );
   }
