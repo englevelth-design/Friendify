@@ -27,13 +27,28 @@ class _ChatPageState extends State<ChatPage> {
     _messagesStream = Supabase.instance.client
         .from('messages')
         .stream(primaryKey: ['id'])
-        .order('created_at', ascending: false) // Sort by NEWEST FIRST
-        .map((maps) => maps.where((msg) {
+
+        // Removed .order() from stream definition to avoid potential SDK bugs. 
+        // We will sort client-side in the map function.
+        .map((maps) {
+           debugPrint("STREAM RECEIVED: ${maps.length} messages");
+           
+           final filtered = maps.where((msg) {
               final sender = msg['sender_id'];
               final receiver = msg['receiver_id'];
               return (sender == _myId && receiver == widget.targetUserId) ||
                      (sender == widget.targetUserId && receiver == _myId);
-            }).toList());
+            }).toList();
+            
+            // Sort by Created At (Descending / Newest First)
+            filtered.sort((a, b) {
+              final aTime = DateTime.parse(a['created_at']);
+              final bTime = DateTime.parse(b['created_at']);
+              return bTime.compareTo(aTime); // b - a = Descending
+            });
+            
+            return filtered;
+        });
   }
 
   Future<void> _sendMessage() async {
@@ -51,7 +66,7 @@ class _ChatPageState extends State<ChatPage> {
       // GHOST REPLY LOGIC (Fake AI)
       // If we are sending to a ghost (Luna, Neon, Star), they reply!
       // In a real app, this would be a server-side Edge Function.
-      await Future.delayed(const Duration(seconds: 2));
+      await Future.delayed(const Duration(seconds: 1));
       if (!mounted) return;
       
       final replies = [
