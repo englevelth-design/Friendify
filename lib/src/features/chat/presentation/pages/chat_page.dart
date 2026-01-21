@@ -63,27 +63,8 @@ class _ChatPageState extends State<ChatPage> {
         'content': text,
       });
 
-      // GHOST REPLY LOGIC (Fake AI)
-      // If we are sending to a ghost (Luna, Neon, Star), they reply!
-      // In a real app, this would be a server-side Edge Function.
-      await Future.delayed(const Duration(seconds: 1));
-      if (!mounted) return;
-      
-      final replies = [
-        "That's awesome! ⚡",
-        "Tell me more about that.",
-        "I was just thinking the same thing!",
-        "Haha totally.",
-        "When are we meeting up?",
-        "Do you like sushi? 🍣",
-        "Let's ride! 🏍️"
-      ];
-      
-      await Supabase.instance.client.from('messages').insert({
-        'sender_id': widget.targetUserId,
-        'receiver_id': _myId,
-        'content': (replies..shuffle()).first,
-      });
+      // Production Mode: No auto-replies.
+      // Messages are only sent by real humans now.
 
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to send')));
