@@ -1,9 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:friendify/src/app.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:friendify/src/features/auth/presentation/widgets/auth_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 1. Force Portrait Mode
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
+
+  // 2. Enable Edge-to-Edge (Transparent Status & Nav Bar)
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    systemNavigationBarColor: Colors.transparent,
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light, 
+  ));
+
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   
   await Supabase.initialize(
     url: 'https://lcnpedbzmzvhrtfhqfno.supabase.co',
@@ -11,4 +26,36 @@ void main() async {
   );
 
   runApp(const FriendifyApp());
+}
+
+class FriendifyApp extends StatelessWidget {
+  const FriendifyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Friendify',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFD4FF00),
+          brightness: Brightness.light, // SWITCH TO LIGHT
+          primary: const Color(0xFFD4FF00),
+          secondary: const Color(0xFF38BDF8),
+          surface: Colors.white,
+          background: Colors.white,
+        ),
+        useMaterial3: true,
+        fontFamily: 'Roboto', // Or standard
+        scaffoldBackgroundColor: Colors.transparent, // Important for gradient
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          titleTextStyle: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+          iconTheme: IconThemeData(color: Colors.black),
+        ),
+      ),
+      home: const AuthGate(),
+    );
+  }
 }

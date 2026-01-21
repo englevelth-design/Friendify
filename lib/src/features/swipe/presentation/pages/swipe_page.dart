@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:friendify/src/core/models/profile.dart';
 import 'package:friendify/src/features/swipe/presentation/widgets/profile_card.dart';
-import 'package:friendify/src/features/profile/presentation/pages/profile_page.dart';
-import 'package:friendify/src/features/chat/presentation/pages/chat_list_page.dart';
+
 
 import 'package:friendify/src/core/services/supabase_profile_service.dart';
 import 'package:friendify/src/core/services/match_service.dart';
@@ -74,30 +73,11 @@ class _SwipePageState extends State<SwipePage> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Friendify"),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFF38BDF8)), // Moonlight Blue
-            onPressed: () {
-               Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatListPage()));
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.person, color: Color(0xFFD4FF00)),
-            onPressed: () {
-               Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfilePage()));
-            },
-          )
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
+    // Simplified for Tab Layout: No Scaffold, No AppBar.
+    // The MainPage handles the Scaffold.
+    return SafeArea(
+      child: Column(
+        children: [
             Flexible(
               child: CardSwiper(
                 controller: controller,
@@ -121,22 +101,24 @@ class _SwipePageState extends State<SwipePage> {
                   FloatingActionButton(
                     heroTag: "dislike",
                     onPressed: () => controller.swipe(CardSwiperDirection.left),
-                    backgroundColor: const Color(0xFF1E293B), // Dark Slate
-                    foregroundColor: Colors.white54,
+                    backgroundColor: Colors.white, // White for light mode
+                    foregroundColor: Colors.redAccent,
+                    elevation: 5,
                     child: const Icon(Icons.close),
                   ),
                   FloatingActionButton(
                     heroTag: "like",
                     onPressed: () => controller.swipe(CardSwiperDirection.right),
-                    backgroundColor: const Color(0xFFD4FF00), // Firefly Glow
-                    foregroundColor: Colors.black, // High contrast on neon
+                    backgroundColor: Colors.black, // Dark for contrast
+                    foregroundColor: const Color(0xFFD4FF00), // Firefly Green icon
+                    elevation: 5,
                     child: const Icon(Icons.favorite),
                   ),
                 ],
               ),
             ),
           ],
-        ),
+
       ),
     );
   }

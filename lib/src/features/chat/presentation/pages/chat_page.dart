@@ -107,13 +107,14 @@ class _ChatPageState extends State<ChatPage> {
                         margin: const EdgeInsets.symmetric(vertical: 4),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         decoration: BoxDecoration(
-                          color: isMe ? const Color(0xFFD4FF00) : Colors.white.withOpacity(0.1),
+                          // Me: Neon, Other: Light Grey
+                          color: isMe ? const Color(0xFFD4FF00) : Colors.grey[200],
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           msg['content'],
                           style: TextStyle(
-                            color: isMe ? Colors.black : Colors.white,
+                            color: Colors.black, // Always black text for readability
                             fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
                           ),
                         ),
@@ -137,7 +138,7 @@ class _ChatPageState extends State<ChatPage> {
                 const SizedBox(width: 8),
                 IconButton(
                   onPressed: _sendMessage,
-                  icon: const Icon(Icons.send, color: Color(0xFFD4FF00)),
+                  icon: const Icon(Icons.send, color: Colors.black), // Black send icon
                 )
               ],
             ),

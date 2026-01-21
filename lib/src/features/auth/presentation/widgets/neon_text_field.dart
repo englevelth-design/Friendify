@@ -17,19 +17,19 @@ class NeonTextField extends StatelessWidget {
     return TextField(
       controller: controller,
       obscureText: isPassword,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: Colors.black), // Black Text for Light Mode
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+        labelStyle: TextStyle(color: Colors.black.withOpacity(0.6)), // Dark Label
         filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
+        fillColor: Colors.black.withOpacity(0.05), // Slight dark tint
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+          borderSide: BorderSide(color: Colors.black.withOpacity(0.1)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFD4FF00)), // Neon Green
+          borderSide: const BorderSide(color: Color(0xFFD4FF00), width: 2), // Neon Green Focus
         ),
       ),
     );

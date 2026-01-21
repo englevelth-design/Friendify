@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:friendify/src/features/swipe/presentation/pages/swipe_page.dart';
+
 import '../widgets/neon_text_field.dart';
 import 'register_page.dart';
 
@@ -23,11 +23,10 @@ class _LoginPageState extends State<LoginPage> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const SwipePage()),
-        );
-      }
+      // if (mounted) {
+      //   // AuthGate listens to the stream, so it will automatically redirect to MainPage.
+      //   // No need to manually push anything.
+      // }
     } on AuthException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
@@ -53,7 +52,7 @@ class _LoginPageState extends State<LoginPage> {
                 "Welcome Back, Firefly",
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
+                  color: Colors.black, // Dark Text
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -78,7 +77,7 @@ class _LoginPageState extends State<LoginPage> {
                 onPressed: () {
                   Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterPage()));
                 },
-                child: const Text("New here? Join the Swarm", style: TextStyle(color: Colors.white70)),
+                child: const Text("New here? Join the Swarm", style: TextStyle(color: Colors.grey)),
               )
             ],
           ),

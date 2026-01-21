@@ -49,7 +49,7 @@ class _RegisterPageState extends State<RegisterPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: const BackButton(color: Colors.white),
+        leading: const BackButton(color: Colors.black), // Dark Back Button
       ),
       body: SafeArea(
         child: Padding(
@@ -62,7 +62,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 "Join the Swarm",
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: const Color(0xFFD4FF00),
+                  color: Colors.black, // Dark Text
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -74,7 +74,7 @@ class _RegisterPageState extends State<RegisterPage> {
               ElevatedButton(
                 onPressed: _isLoading ? null : _register,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
+                  backgroundColor: const Color(0xFFD4FF00), // Firefly Yellow Button
                   foregroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
