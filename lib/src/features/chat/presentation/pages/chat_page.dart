@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:friendify/src/features/auth/presentation/widgets/neon_text_field.dart';
+import 'package:friendify/src/features/profile/presentation/pages/profile_page.dart';
 
 class ChatPage extends StatefulWidget {
   final String targetUserId;
   final String targetUserName;
+  final String? targetUserImage; // New
 
   const ChatPage({
     super.key, 
     required this.targetUserId,
-    required this.targetUserName
+    required this.targetUserName,
+    this.targetUserImage,
   });
 
   @override
@@ -27,12 +30,7 @@ class _ChatPageState extends State<ChatPage> {
     _messagesStream = Supabase.instance.client
         .from('messages')
         .stream(primaryKey: ['id'])
-
-        // Removed .order() from stream definition to avoid potential SDK bugs. 
-        // We will sort client-side in the map function.
         .map((maps) {
-           debugPrint("STREAM RECEIVED: ${maps.length} messages");
-           
            final filtered = maps.where((msg) {
               final sender = msg['sender_id'];
               final receiver = msg['receiver_id'];
@@ -40,11 +38,10 @@ class _ChatPageState extends State<ChatPage> {
                      (sender == widget.targetUserId && receiver == _myId);
             }).toList();
             
-            // Sort by Created At (Descending / Newest First)
             filtered.sort((a, b) {
               final aTime = DateTime.parse(a['created_at']);
               final bTime = DateTime.parse(b['created_at']);
-              return bTime.compareTo(aTime); // b - a = Descending
+              return bTime.compareTo(aTime); 
             });
             
             return filtered;
@@ -62,20 +59,48 @@ class _ChatPageState extends State<ChatPage> {
         'receiver_id': widget.targetUserId,
         'content': text,
       });
-
-      // Production Mode: No auto-replies.
-      // Messages are only sent by real humans now.
-
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to send')));
     }
   }
 
+  String _formatTime(String timestamp) {
+    final dt = DateTime.parse(timestamp).toLocal();
+    final hour = dt.hour.toString().padLeft(2, '0');
+    final minute = dt.minute.toString().padLeft(2, '0');
+    return "$hour:$minute";
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.targetUserName),
+        titleSpacing: 0,
+        title: GestureDetector(
+          onTap: () {
+            // Navigate to Profile Viewer
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => ProfilePage(userId: widget.targetUserId)),
+            );
+          },
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundImage: widget.targetUserImage != null 
+                  ? NetworkImage(widget.targetUserImage!) 
+                  : null,
+                backgroundColor: Colors.grey[200],
+                radius: 20,
+                child: widget.targetUserImage == null 
+                  ? const Icon(Icons.person, color: Colors.grey) 
+                  : null,
+              ),
+              const SizedBox(width: 12),
+              Text(widget.targetUserName),
+            ],
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -90,11 +115,11 @@ class _ChatPageState extends State<ChatPage> {
                 }
                 final messages = snapshot.data!;
                 if (messages.isEmpty) {
-                  return const Center(child: Text("Say Hello! 👋", style: TextStyle(color: Colors.white54)));
+                  return const Center(child: Text("Say Hello! 👋", style: TextStyle(color: Colors.black54)));
                 }
                 
                 return ListView.builder(
-                  reverse: true, // Newest at bottom visually
+                  reverse: true,
                   padding: const EdgeInsets.all(16),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
@@ -107,16 +132,32 @@ class _ChatPageState extends State<ChatPage> {
                         margin: const EdgeInsets.symmetric(vertical: 4),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         decoration: BoxDecoration(
-                          // Me: Neon, Other: Light Grey
-                          color: isMe ? const Color(0xFFD4FF00) : Colors.grey[200],
+                          // Me: Neon, Other: White (requested)
+                          color: isMe ? const Color(0xFFD4FF00) : Colors.white,
                           borderRadius: BorderRadius.circular(20),
+                          boxShadow: isMe ? null : [
+                            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, spreadRadius: 1)
+                          ]
                         ),
-                        child: Text(
-                          msg['content'],
-                          style: TextStyle(
-                            color: Colors.black, // Always black text for readability
-                            fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              msg['content'],
+                              style: TextStyle(
+                                color: Colors.black, 
+                                fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _formatTime(msg['created_at']),
+                              style: TextStyle(
+                                color: Colors.black.withOpacity(0.5),
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -125,22 +166,25 @@ class _ChatPageState extends State<ChatPage> {
               },
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: NeonTextField(
-                    controller: _messageController,
-                    label: "Type a message...",
+          // SAFE AREA for Input Field to avoid overlap with bottom nav
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: NeonTextField(
+                      controller: _messageController,
+                      label: "Type a message...",
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: _sendMessage,
-                  icon: const Icon(Icons.send, color: Colors.black), // Black send icon
-                )
-              ],
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: _sendMessage,
+                    icon: const Icon(Icons.send, color: Colors.black), 
+                  )
+                ],
+              ),
             ),
           )
         ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:friendify/src/core/services/match_service.dart';
 import 'chat_page.dart';
 
@@ -11,7 +12,8 @@ class ChatListPage extends StatefulWidget {
 
 class _ChatListPageState extends State<ChatListPage> {
   final MatchService _matchService = MatchService();
-  List<Map<String, dynamic>> _matches = [];
+  List<Map<String, dynamic>> _newMatches = [];
+  List<Map<String, dynamic>> _activeChats = [];
   bool _isLoading = true;
 
   @override
@@ -23,78 +25,296 @@ class _ChatListPageState extends State<ChatListPage> {
   Future<void> _loadMatches() async {
     try {
       final matches = await _matchService.getMatches();
+      final myId = Supabase.instance.client.auth.currentUser!.id;
+      
+      final List<Map<String, dynamic>> newMatches = [];
+      final List<Map<String, dynamic>> activeChats = [];
+
+      // Fetch last message for each match to sort them
+      await Future.wait(matches.map((match) async {
+        final matchId = match['id'];
+        
+        final res = await Supabase.instance.client
+            .from('messages')
+            .select()
+            .or('and(sender_id.eq.$myId,receiver_id.eq.$matchId),and(sender_id.eq.$matchId,receiver_id.eq.$myId)')
+            .order('created_at', ascending: false)
+            .limit(1)
+            .maybeSingle();
+            
+        if (res == null) {
+          newMatches.add(match);
+        } else {
+          // It's an active chat, inject last message info
+          final updatedMatch = Map<String, dynamic>.from(match);
+          updatedMatch['last_message'] = res['content'];
+          updatedMatch['last_time'] = res['created_at'];
+          activeChats.add(updatedMatch);
+        }
+      }));
+
+      // Sort chats by time
+      activeChats.sort((a, b) {
+        final tA = DateTime.tryParse(a['last_time'] ?? '') ?? DateTime(0);
+        final tB = DateTime.tryParse(b['last_time'] ?? '') ?? DateTime(0);
+        return tB.compareTo(tA); 
+      });
+
       if (mounted) {
         setState(() {
-          _matches = matches;
+          _newMatches = newMatches;
+          _activeChats = activeChats;
           _isLoading = false;
         });
       }
     } catch (e) {
-      debugPrint("Error loading matches: $e");
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e")),
-        );
-      }
+      debugPrint("Error loading chats: $e");
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Firefly Chat"),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _matches.isEmpty
-              ? Center(
+      backgroundColor: Colors.transparent, 
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. GLOWING HEADER
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Firefly Chat",
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFFD4FF00), 
+                      shadows: [
+                        BoxShadow(
+                          color: const Color(0xFFD4FF00).withOpacity(0.5),
+                          blurRadius: 20,
+                          offset: const Offset(0, 2),
+                        )
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.search, color: Colors.black54, size: 28),
+                ],
+              ),
+            ),
+
+            if (_isLoading)
+              const Expanded(child: Center(child: CircularProgressIndicator()))
+            else
+              Expanded(
+                child: SingleChildScrollView(
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.favorite_border, size: 60, color: Colors.white24),
-                      const SizedBox(height: 16),
-                      const Text("No Matches Yet", style: TextStyle(color: Colors.white54)),
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: _loadMatches, 
-                        child: const Text("Refresh", style: TextStyle(color: Color(0xFFD4FF00)))
-                      )
+                      // 2. NEW MATCHES (Horizontal Scroll)
+                      // Only show if there ARE new matches
+                      if (_newMatches.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: const Text("New Matches", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          height: 100,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            itemCount: _newMatches.length + 1, 
+                            itemBuilder: (context, index) {
+                              if (index == 0) return _buildNewMatchItem(null, true);
+                              return _buildNewMatchItem(_newMatches[index - 1], false);
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
+                      // 3. MESSAGES LIST
+                      if (_activeChats.isNotEmpty)
+                      if (_activeChats.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 16),
+                              ..._activeChats.asMap().entries.map((entry) {
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1FFAB).withOpacity(0.6), // Slightly Lime Glass
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: Colors.white, width: 1),
+                                    ),
+                                    child: _buildMessageTile(entry.value, entry.key),
+                                  );
+                              }), 
+                               const SizedBox(height: 100), 
+                            ],
+                          ),
+                        )
+                      else if (_newMatches.isEmpty) // Truly empty state
+                         _buildEmptyState()
                     ],
                   ),
-                )
-              : ListView.builder(
-                  itemCount: _matches.length,
-                  itemBuilder: (context, index) {
-                    final profile = _matches[index];
-                    final imageUrl = (profile['image_urls'] as List?)?.isNotEmpty == true 
-                        ? profile['image_urls'][0] 
-                        : null;
-                    
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
-                        backgroundColor: Colors.grey[800],
-                        child: imageUrl == null ? const Icon(Icons.person) : null,
-                      ),
-                      title: Text(profile['name'] ?? 'Unknown', style: const TextStyle(color: Colors.white)),
-                      subtitle: const Text("Start a conversation...", style: TextStyle(color: Colors.white54)),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => ChatPage(
-                              targetUserId: profile['id'],
-                              targetUserName: profile['name'] ?? 'Firefly',
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
                 ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      heightFactor: 4, // Center vertically roughly
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.favorite_border, size: 60, color: Colors.black12),
+          const SizedBox(height: 16),
+          const Text("No Matches Yet", style: TextStyle(color: Colors.black45)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNewMatchItem(Map<String, dynamic>? profile, bool isAdd) {
+    if (isAdd) {
+      return Container(
+        margin: const EdgeInsets.only(right: 20),
+        child: Column(
+          children: [
+            Container(
+              width: 65,
+              height: 65,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.grey[100],
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              child: const Icon(Icons.favorite, color: Color(0xFFD4FF00)),
+            ),
+            const SizedBox(height: 8),
+            const Text("Likes", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      );
+    }
+
+    final imageUrl = (profile!['image_urls'] as List?)?.firstOrNull;
+    return GestureDetector(
+      onTap: () => _openChat(profile),
+      child: Container(
+        margin: const EdgeInsets.only(right: 20),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFD4FF00), width: 2),
+                boxShadow: [
+                  BoxShadow(color: const Color(0xFFD4FF00).withOpacity(0.3), blurRadius: 10)
+                ]
+              ),
+              child: CircleAvatar(
+                radius: 30,
+                backgroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
+                backgroundColor: Colors.grey[200],
+                child: imageUrl == null ? const Icon(Icons.person, color: Colors.grey) : null,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              profile['name'] ?? 'User',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessageTile(Map<String, dynamic> profile, int index) {
+    final imageUrl = (profile['image_urls'] as List?)?.firstOrNull;
+    final lastMessage = profile['last_message'] ?? "Start a conversation...";
+    final lastTimeStr = profile['last_time'];
+    String timeDisplay = "Now";
+    
+    if (lastTimeStr != null) {
+      final t = DateTime.parse(lastTimeStr);
+      final diff = DateTime.now().difference(t);
+      if (diff.inMinutes < 60) {
+        timeDisplay = "${diff.inMinutes}m";
+      } else if (diff.inHours < 24) {
+        timeDisplay = "${diff.inHours}h";
+      } else {
+        timeDisplay = "${diff.inDays}d";
+      }
+    }
+    
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      onTap: () => _openChat(profile),
+      leading: Stack(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
+            backgroundColor: Colors.grey[200],
+            child: imageUrl == null ? const Icon(Icons.person, color: Colors.grey) : null,
+          ),
+        ],
+      ),
+      title: Text(
+        profile['name'] ?? 'User',
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black),
+      ),
+      subtitle: Text(
+        lastMessage,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: lastMessage == "Start a conversation..." 
+              ? Colors.black54 
+              : Colors.black87,
+          fontWeight: lastMessage == "Start a conversation..." 
+              ? FontWeight.normal 
+              : FontWeight.w500 
+        ),
+      ),
+      trailing: Column(
+        mainAxisSize: MainAxisSize.min, // Fix Overflow
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(timeDisplay, style: const TextStyle(color: Colors.black45, fontSize: 12)),
+          // Removing the unread dot for now until we track read status
+        ],
+      ),
+    );
+  }
+
+  void _openChat(Map<String, dynamic> profile) {
+     final imageUrl = (profile['image_urls'] as List?)?.firstOrNull;
+     Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ChatPage(
+          targetUserId: profile['id'],
+          targetUserName: profile['name'] ?? 'Firefly',
+          targetUserImage: imageUrl,
+        ),
+      ),
     );
   }
 }

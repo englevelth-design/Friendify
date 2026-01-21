@@ -5,7 +5,9 @@ import 'package:friendify/src/features/auth/presentation/pages/login_page.dart';
 import 'package:friendify/src/features/auth/presentation/widgets/auth_gate.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  final String? userId; // If null, assume current user (Viewer Mode vs Owner Mode)
+  
+  const ProfilePage({super.key, this.userId});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -22,13 +24,13 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _fetchProfile() async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
-    if (userId == null) return;
+    final targetId = widget.userId ?? Supabase.instance.client.auth.currentUser?.id;
+    if (targetId == null) return;
 
     final data = await Supabase.instance.client
         .from('profiles')
         .select()
-        .eq('id', userId)
+        .eq('id', targetId)
         .maybeSingle();
 
     if (mounted) {
@@ -42,7 +44,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _logout() async {
     await Supabase.instance.client.auth.signOut();
     if (mounted) {
-       // AuthGate will handle the redirect, but to be safe and clean:
+       // AuthGate will handle the redirect
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const AuthGate()), 
         (route) => false
@@ -55,6 +57,9 @@ class _ProfilePageState extends State<ProfilePage> {
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final isMe = widget.userId == null || widget.userId == currentUserId;
 
     final name = _profileData?['name'] ?? 'Firefly User';
     final age = _profileData?['age']?.toString() ?? '24';
@@ -72,6 +77,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       backgroundColor: Colors.transparent, // Let gradient show through
+      appBar: !isMe ? AppBar(backgroundColor: Colors.transparent, elevation: 0) : null,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -196,20 +202,28 @@ class _ProfilePageState extends State<ProfilePage> {
             
             const SizedBox(height: 32),
 
-            // 3. WIDE ACTION BUTTONS
+            // 3. WIDE ACTION BUTTONS (Context Aware)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
-                children: [
+                children: isMe ? [
                   Expanded(child: _buildWideButton("SETTINGS", Icons.settings, Colors.white, _logout, textColor: Colors.black)),
                   const SizedBox(width: 12),
-                  // EDIT is dominant
                   Expanded(flex: 2, child: _buildWideButton("EDIT INFO", Icons.edit, Colors.black, () async {
                     final result = await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EditProfilePage()));
                     if (result == true) _fetchProfile();
                   }, textColor: Colors.white)),
                   const SizedBox(width: 12),
                   Expanded(child: _buildWideButton("SAFETY", Icons.shield, Colors.white, () {}, textColor: Colors.black)),
+                ] : [
+                  // VIEWER MODE BUTTONS
+                  Expanded(child: _buildWideButton("REPORT", Icons.flag, Colors.white, () {}, textColor: Colors.red)),
+                  const SizedBox(width: 12),
+                  Expanded(flex: 2, child: _buildWideButton("START CHAT", Icons.chat_bubble, Colors.black, () {
+                    Navigator.pop(context); // Go back to chat
+                  }, textColor: Colors.white)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildWideButton("BLOCK", Icons.block, Colors.white, () {}, textColor: Colors.black)),
                 ],
               ),
             ),
@@ -249,7 +263,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 mainAxisSpacing: 8,
                 childAspectRatio: 0.8,
               ),
-              itemCount: photos.length + 1, // +1 for "Add Photo" placeholder
+              itemCount: photos.length + (isMe ? 1 : 0), // Hide Add Button if not me
               itemBuilder: (context, index) {
                 if (index < photos.length) {
                   return Container(
@@ -273,36 +287,37 @@ class _ProfilePageState extends State<ProfilePage> {
 
             const SizedBox(height: 40),
 
-            // 5. PROMO CARD
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                color: const Color(0xFF1E293B),
-                border: Border.all(color: const Color(0xFFD4FF00).withOpacity(0.3)),
+            // 5. PROMO CARD (Only for Owner)
+            if (isMe)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  color: const Color(0xFF1E293B),
+                  border: Border.all(color: const Color(0xFFD4FF00).withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                     const Text("Firefly Gold", style: TextStyle(color: Color(0xFFD4FF00), fontSize: 20, fontWeight: FontWeight.bold)),
+                     const SizedBox(height: 8),
+                     const Text("• See who likes you\n• Unlimited Swipes\n• Advanced Filters", style: TextStyle(color: Colors.white70, height: 1.6)),
+                     const SizedBox(height: 20),
+                     ElevatedButton(
+                       onPressed: (){},
+                       style: ElevatedButton.styleFrom(
+                         backgroundColor: const Color(0xFFD4FF00),
+                         foregroundColor: Colors.black,
+                         padding: const EdgeInsets.symmetric(vertical: 16),
+                         shape: const StadiumBorder()
+                       ),
+                       child: const Text("GET GOLD", style: TextStyle(fontWeight: FontWeight.bold)),
+                     )
+                  ],
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                   const Text("Firefly Gold", style: TextStyle(color: Color(0xFFD4FF00), fontSize: 20, fontWeight: FontWeight.bold)),
-                   const SizedBox(height: 8),
-                   const Text("• See who likes you\n• Unlimited Swipes\n• Advanced Filters", style: TextStyle(color: Colors.white70, height: 1.6)),
-                   const SizedBox(height: 20),
-                   ElevatedButton(
-                     onPressed: (){},
-                     style: ElevatedButton.styleFrom(
-                       backgroundColor: const Color(0xFFD4FF00),
-                       foregroundColor: Colors.black,
-                       padding: const EdgeInsets.symmetric(vertical: 16),
-                       shape: const StadiumBorder()
-                     ),
-                     child: const Text("GET GOLD", style: TextStyle(fontWeight: FontWeight.bold)),
-                   )
-                ],
-              ),
-            ),
-             const SizedBox(height: 40),
+              const SizedBox(height: 40),
           ],
         ),
       ),
