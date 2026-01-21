@@ -3,6 +3,7 @@ import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:friendify/src/core/models/profile.dart';
 import 'package:friendify/src/core/services/mock_profile_service.dart';
 import 'package:friendify/src/features/swipe/presentation/widgets/profile_card.dart';
+import 'package:friendify/src/features/profile/presentation/pages/profile_page.dart';
 
 class SwipePage extends StatefulWidget {
   const SwipePage({super.key});
@@ -66,6 +67,14 @@ class _SwipePageState extends State<SwipePage> {
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person, color: Color(0xFFD4FF00)),
+            onPressed: () {
+               Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfilePage()));
+            },
+          )
+        ],
       ),
       body: SafeArea(
         child: Column(

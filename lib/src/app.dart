@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'features/swipe/presentation/pages/swipe_page.dart';
+import 'package:friendify/src/features/auth/presentation/pages/splash_page.dart';
 
 class FriendifyApp extends StatelessWidget {
   const FriendifyApp({super.key});
@@ -23,7 +23,7 @@ class FriendifyApp extends StatelessWidget {
         textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
         scaffoldBackgroundColor: const Color(0xFF0F172A), // Deep Night Sky
       ),
-      home: const SwipePage(),
+      home: const SplashPage(),
     );
   }
 }
