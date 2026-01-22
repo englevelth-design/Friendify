@@ -42,10 +42,10 @@ class _SplashPageState extends State<SplashPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.flash_on, size: 80, color: Color(0xFFD4FF00)),
+            Image.asset('assets/images/FF-Mini_Logo.png', width: 100, height: 100),
             const SizedBox(height: 16),
             Text(
-              "Friendify",
+              "Firefly Friends",
               style: Theme.of(context).textTheme.displaySmall?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,

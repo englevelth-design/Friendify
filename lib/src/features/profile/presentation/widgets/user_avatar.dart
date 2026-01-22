@@ -7,8 +7,9 @@ import 'image_viewer_page.dart';
 class UserAvatar extends StatefulWidget {
   final String? imageUrl;
   final Function(String) onUpload;
+  final double radius;
 
-  const UserAvatar({super.key, this.imageUrl, required this.onUpload});
+  const UserAvatar({super.key, this.imageUrl, required this.onUpload, this.radius = 60});
 
   @override
   State<UserAvatar> createState() => _UserAvatarState();
@@ -89,7 +90,7 @@ class _UserAvatarState extends State<UserAvatar> {
           Hero(
             tag: 'avatar_image',
             child: CircleAvatar(
-              radius: 60,
+              radius: widget.radius,
               backgroundColor: Colors.grey[800],
               backgroundImage: widget.imageUrl != null ? NetworkImage(widget.imageUrl!) : null,
               child: _isLoading 

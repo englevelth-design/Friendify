@@ -46,10 +46,10 @@ class _LoginPageState extends State<LoginPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-               const Icon(Icons.flash_on, size: 60, color: Color(0xFFD4FF00)),
+               Image.asset('assets/images/FF-Mini_Logo.png', width: 80, height: 80),
                const SizedBox(height: 24),
                Text(
-                "Welcome Back, Firefly",
+                "Welcome Back!",
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: Colors.black, // Dark Text

@@ -14,10 +14,10 @@ class AuthGate extends StatelessWidget {
       builder: (context, snapshot) {
         // While initializing, show a simple loading/splash screen
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: Color(0xFF0F172A),
+          return Scaffold(
+            backgroundColor: const Color(0xFF0F172A),
             body: Center(
-              child: Icon(Icons.flash_on, size: 80, color: Color(0xFFD4FF00)),
+              child: Image.asset('assets/images/FF-Mini_Logo.png', width: 100, height: 100),
             ),
           );
         }

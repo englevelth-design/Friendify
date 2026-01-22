@@ -107,7 +107,7 @@ class _ChatListPageState extends State<ChatListPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Firefly Chat",
+                    "Chats",
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w900,
