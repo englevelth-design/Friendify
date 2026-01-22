@@ -4,28 +4,41 @@ class NeonTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final bool isPassword;
+  final IconData? icon;
+  final bool isNumber;
+  final bool isDarkTheme;
 
   const NeonTextField({
     super.key,
     required this.controller,
     required this.label,
     this.isPassword = false,
+    this.icon,
+    this.isNumber = false,
+    this.isDarkTheme = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final textColor = isDarkTheme ? Colors.white : Colors.black;
+    final labelColor = isDarkTheme ? Colors.white.withOpacity(0.6) : Colors.black.withOpacity(0.6);
+    final fillColor = isDarkTheme ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05);
+    final borderColor = isDarkTheme ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.1);
+
     return TextField(
       controller: controller,
       obscureText: isPassword,
-      style: const TextStyle(color: Colors.black), // Black Text for Light Mode
+      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+      style: TextStyle(color: textColor), 
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.black.withOpacity(0.6)), // Dark Label
+        labelStyle: TextStyle(color: labelColor),
+        prefixIcon: icon != null ? Icon(icon, color: const Color(0xFFD4FF00)) : null,
         filled: true,
-        fillColor: Colors.black.withOpacity(0.05), // Slight dark tint
+        fillColor: fillColor,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.black.withOpacity(0.1)),
+          borderSide: BorderSide(color: borderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

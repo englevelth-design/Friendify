@@ -81,6 +81,7 @@ class _UserAvatarState extends State<UserAvatar> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: _pickAndCropImage,
       onLongPress: widget.imageUrl != null ? _viewImage : null,
       child: Stack(

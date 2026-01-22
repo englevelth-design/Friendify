@@ -83,93 +83,104 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Column(
           children: [
             // 1. COVER PHOTO & AVATAR HEADER
-            Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                // Cover Photo (Standard Friendify Banner)
-                Container(
-                  height: 200,
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage('assets/images/friendify-top-banner.png'),
-                      fit: BoxFit.cover,
+            SizedBox(
+              height: 260, // 200 banner + 60 for avatar overlap
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.topCenter,
+                children: [
+                  // Cover Photo (Standard Friendify Banner)
+                  Container(
+                    height: 200,
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/images/friendify-top-banner.png'),
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
-                ),
-                // Gradient Overlay (White at bottom to blend with page)
-                Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.black.withOpacity(0.2), Colors.white.withOpacity(0.1)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
+                  // Gradient Overlay (White at bottom to blend with page)
+                  Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.black.withOpacity(0.2), Colors.white.withOpacity(0.1)],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
                     ),
                   ),
-                ),
-                
-                // The Glowing Avatar (Overlapping bottom)
-                Positioned(
-                  bottom: -60,
-                  child: GestureDetector(
-                    onTap: imageUrl != null ? () => openImageViewer(context, imageUrl, heroTag: 'profile_avatar') : null,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                         Container(
-                           width: 140,
-                           height: 140,
-                           decoration: BoxDecoration(
-                             shape: BoxShape.circle,
-                             boxShadow: [
-                               BoxShadow(
-                                 color: const Color(0xFFD4FF00).withOpacity(0.6),
-                                 blurRadius: 40,
-                                 spreadRadius: 2,
+                  
+                  // The Glowing Avatar (now properly positioned within a larger Stack)
+                  Positioned(
+                    top: 140, // 200 - 60 = avatar starts 60px before banner ends
+                    child: SizedBox(
+                      width: 140,
+                      height: 140,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(70),
+                          onTap: imageUrl != null ? () => openImageViewer(context, imageUrl, heroTag: 'profile_avatar') : null,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                               Container(
+                                 width: 140,
+                                 height: 140,
+                                 decoration: BoxDecoration(
+                                   shape: BoxShape.circle,
+                                   boxShadow: [
+                                     BoxShadow(
+                                       color: const Color(0xFFD4FF00).withOpacity(0.6),
+                                       blurRadius: 40,
+                                       spreadRadius: 2,
+                                     )
+                                   ],
+                                 ),
+                               ),
+                               Hero(
+                                 tag: 'profile_avatar',
+                                 child: Container(
+                                   width: 130,
+                                   height: 130,
+                                   decoration: BoxDecoration(
+                                     shape: BoxShape.circle,
+                                     border: Border.all(color: Colors.white, width: 5),
+                                     image: imageUrl != null 
+                                         ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover)
+                                         : null,
+                                     color: Colors.grey[200],
+                                   ),
+                                   child: imageUrl == null 
+                                       ? const Icon(Icons.person, size: 60, color: Colors.grey)
+                                       : null,
+                                 ),
+                               ),
+                               Positioned(
+                                 bottom: 10,
+                                 right: 10,
+                                 child: Container(
+                                   padding: const EdgeInsets.all(4),
+                                   decoration: const BoxDecoration(
+                                     color: Colors.blueAccent,
+                                     shape: BoxShape.circle,
+                                   ),
+                                   child: const Icon(Icons.check, size: 16, color: Colors.white),
+                                 ),
                                )
-                             ],
-                           ),
-                         ),
-                         Hero(
-                           tag: 'profile_avatar',
-                           child: Container(
-                             width: 130,
-                             height: 130,
-                             decoration: BoxDecoration(
-                               shape: BoxShape.circle,
-                               border: Border.all(color: Colors.white, width: 5),
-                               image: imageUrl != null 
-                                   ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover)
-                                   : null,
-                               color: Colors.grey[200],
-                             ),
-                             child: imageUrl == null 
-                                 ? const Icon(Icons.person, size: 60, color: Colors.grey)
-                                 : null,
-                           ),
-                         ),
-                         Positioned(
-                           bottom: 10,
-                           right: 10,
-                           child: Container(
-                             padding: const EdgeInsets.all(4),
-                             decoration: const BoxDecoration(
-                               color: Colors.blueAccent,
-                               shape: BoxShape.circle,
-                             ),
-                             child: const Icon(Icons.check, size: 16, color: Colors.white),
-                           ),
-                         )
-                      ],
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             
-            const SizedBox(height: 70), // Spacing for Avatar overlap
+            const SizedBox(height: 10), // Reduced spacing since avatar is now inside Stack
             
             // 2. NAME & INFO
             Text(

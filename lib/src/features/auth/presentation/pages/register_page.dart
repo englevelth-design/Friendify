@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:friendify/src/features/swipe/presentation/pages/swipe_page.dart';
+// import 'package:friendify/src/features/swipe/presentation/pages/swipe_page.dart';
+import 'package:friendify/src/features/auth/presentation/widgets/auth_gate.dart';
 import '../widgets/neon_text_field.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -24,9 +25,12 @@ class _RegisterPageState extends State<RegisterPage> {
       );
       if (mounted) {
         // Auto login usually happens on signup, but we can verify
+        // Auto login usually happens on signup
         if (Supabase.instance.client.auth.currentSession != null) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const SwipePage()),
+          // Navigate to AuthGate to handle onboarding routing
+          Navigator.of(context).pushAndRemoveUntil(
+             MaterialPageRoute(builder: (_) => const AuthGate()),
+             (route) => false,
           );
         } else {
           // If email confirmation is on, they might not be logged in immediately
