@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:friendify/src/core/utils/globals.dart'; // Import to access navigatorKey
+import 'package:friendify/src/features/chat/presentation/pages/chat_page.dart'; // Import for navigation
+
 
 // Global Route Observer
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
@@ -91,20 +93,72 @@ class ChatNotificationService {
 
   void _showNotification(Map<String, dynamic> message, String senderId) async {
      // ACCESS GLOBAL OVERLAY DIRECTLY
-     final overlayState = navigatorKey.currentState?.overlay; // GET OVERLAY STATE
-     
+      final overlayState = navigatorKey.currentState?.overlay; // GET OVERLAY STATE
+      
+      // Define Navigation Logic Reuse
+      final VoidCallback onNotificationTap = () {
+        debugPrint("🔔 Notification Tapped! Navigating to ChatPage...");
+        final nav = navigatorKey.currentState;
+        if (nav == null) {
+          debugPrint("🔔 ERROR: NavigatorState is NULL!");
+          return;
+        }
+        
+        // Navigate
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => ChatPage(
+              targetUserId: senderId, 
+              // We might not have name/image in fallback, but that's okay, ChatPage handles it
+              targetUserName: 'New Message', 
+              targetUserImage: null,
+            ),
+          ),
+        );
+      };
+
     try {
-      final senderProfile = await supabase.from('profiles').select('name').eq('id', senderId).single();
+      // FIX: Use 'image_urls' instead of 'avatar_url' which doesn't exist
+      final senderProfile = await supabase.from('profiles').select('name, image_urls').eq('id', senderId).single();
       final senderName = senderProfile['name'] ?? 'someone';
+      
+      // Handle list of images safely
+      final images = List<dynamic>.from(senderProfile['image_urls'] ?? []);
+      final senderImage = images.isNotEmpty ? images.first as String : null;
 
       final text = message['content'];
       
       if (overlayState != null) {
-        showOverlayNotification(overlayState, senderName, text);
+        showOverlayNotification(
+          overlayState, 
+          senderName, 
+          text,
+          imageUrl: senderImage, // Pass the image
+          onTap: () {
+             // Use specific name/image if available
+              debugPrint("🔔 Notification Tapped! Navigating to ChatPage...");
+              navigatorKey.currentState?.push(
+                MaterialPageRoute(
+                  builder: (_) => ChatPage(
+                    targetUserId: senderId, 
+                    targetUserName: senderName,
+                    targetUserImage: senderImage,
+                  ),
+                ),
+              );
+          }
+        );
+      }
     } catch (e) {
+      debugPrint("🔔 Error fetching profile: $e. Using Fallback.");
       // Fallback
       if (overlayState != null) {
-        showOverlayNotification(overlayState, "New Message", message['content']);
+        showOverlayNotification(
+          overlayState, 
+          "New Message", 
+          message['content'],
+          onTap: onNotificationTap // Pass the generic callback!
+        );
       }
     }
   }
@@ -117,41 +171,144 @@ class ChatPageTracker {
 }
 
 // THE OVERLAY WIDGET
-void showOverlayNotification(OverlayState overlay, String title, String message) {
-  // We don't need Overlay.of(context) anymore, we have the state!
-  final overlayEntry = OverlayEntry(
+// THE OVERLAY WIDGET
+void showOverlayNotification(
+  OverlayState overlay, 
+  String title, 
+  String message, 
+  {
+    String? imageUrl,
+    VoidCallback? onTap
+  }
+) {
+  late OverlayEntry overlayEntry;
+  
+  overlayEntry = OverlayEntry(
     builder: (context) => Positioned(
-      top: 60, // Below Dynamic Island / notch
+      top: 50, // Slightly higher for a floating feel
       left: 16,
       right: 16,
-      child: Material(
-        color: Colors.transparent,
-        child: SafelyDismissible(
-            child: Container(
-            padding: const EdgeInsets.all(16),
+      child: SafelyDismissible(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8), // Extra side spacing for floating look
             decoration: BoxDecoration(
-              color: const Color(0xFFD4FF00), // Firefly Neon
-              borderRadius: BorderRadius.circular(16),
+              // Gradient: Sky Blue to White
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFE0F7FA), Colors.white], // Light Cyan/Sky to White
+              ),
+              borderRadius: BorderRadius.circular(30), // Pill Shape
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1), 
+                  blurRadius: 20, 
+                  offset: const Offset(0, 10),
+                  spreadRadius: 1,
+                )
               ],
-              border: Border.all(color: Colors.white, width: 2),
+              // Neon Green Border
+              border: Border.all(color: const Color(0xFFD4FF00), width: 2), // Firefly Neon
             ),
-            child: Row(
-              children: [
-                const Icon(Icons.mark_chat_unread, color: Colors.black),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(30),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () {
+                  debugPrint("🔔 Overlay InkWell Tapped!");
+                  
+                  try {
+                    onTap?.call();
+                  } catch (e) {
+                    debugPrint("🔔 Error executing onTap: $e");
+                  }
+                  
+                  Future.delayed(const Duration(milliseconds: 200), () {
+                     if (overlayEntry.mounted) {
+                       overlayEntry.remove();
+                     }
+                  });
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
                     children: [
-                      Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      Text(message, style: const TextStyle(fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      // Avatar
+                       Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.black.withOpacity(0.1), width: 1),
+                          color: Colors.white,
+                          image: imageUrl != null && imageUrl.isNotEmpty 
+                              ? DecorationImage(
+                                  image: NetworkImage(imageUrl),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: (imageUrl == null || imageUrl.isEmpty) 
+                            ? const Icon(Icons.person, color: Colors.black54, size: 24)
+                            : null,
+                      ),
+                      const SizedBox(width: 14),
+                      
+                      // Texts
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              title, 
+                              style: const TextStyle(
+                                color: Colors.black, // Explicit Black
+                                fontWeight: FontWeight.w800, 
+                                fontSize: 15,
+                                letterSpacing: -0.5
+                              )
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              message, 
+                              style: const TextStyle(
+                                color: Colors.black87, // Slightly softer black
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ), 
+                              maxLines: 1, 
+                              overflow: TextOverflow.ellipsis
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(width: 12),
+                      
+                      // "View" Indicator
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          "View",
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -161,9 +318,11 @@ void showOverlayNotification(OverlayState overlay, String title, String message)
 
   overlay.insert(overlayEntry);
 
-  // Auto remove after 3 seconds
+  // Auto remove after 4 seconds
   Future.delayed(const Duration(seconds: 4), () {
-    overlayEntry.remove();
+    if (overlayEntry.mounted) {
+      overlayEntry.remove();
+    }
   });
 }
 

@@ -3,9 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:friendify/src/features/auth/presentation/widgets/neon_text_field.dart';
 import 'package:friendify/src/features/profile/presentation/pages/profile_page.dart';
 import 'package:friendify/src/features/chat/presentation/widgets/chat_notification_service.dart';
-import 'package:friendify/main.dart'; // import for routeObserver access if public, or move routeObserver to separate file?
-// Actually routeObserver is in ChatNotificationService file or main? 
-// In previous step I put it in ChatNotificationService file as global val. Let's import that file.
+import 'package:friendify/src/features/chat/presentation/widgets/chat_notification_service.dart';
+
 
 class ChatPage extends StatefulWidget {
   final String targetUserId;
