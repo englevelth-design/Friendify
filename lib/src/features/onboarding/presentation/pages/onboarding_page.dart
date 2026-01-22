@@ -395,40 +395,96 @@ class _OnboardingPageState extends State<OnboardingPage> {
               ),
               const SizedBox(height: 24),
 
-              // --- Passions ---
-              _buildSectionLabel("Passions", icon: Icons.favorite_border),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: availableInterests.map((interest) {
-                  final isSelected = _selectedInterests.contains(interest);
-                  return FilterChip(
-                    label: Text(interest),
-                    labelStyle: GoogleFonts.outfit(
-                      color: isSelected ? Colors.black : _darkText,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          _selectedInterests.add(interest);
-                        } else {
-                          _selectedInterests.remove(interest);
-                        }
-                      });
-                    },
-                    backgroundColor: _lightGrey,
-                    selectedColor: _primaryColor,
-                    checkmarkColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(color: isSelected ? _primaryColor : Colors.grey.shade300),
-                    ),
-                  );
-                }).toList(),
+              // --- Passions (Themed Categories) ---
+              _buildSectionLabel("Passions (Pick up to $maxInterestsAllowed)", icon: Icons.favorite_border),
+              const SizedBox(height: 6),
+              Text(
+                "${_selectedInterests.length}/$maxInterestsAllowed selected",
+                style: GoogleFonts.outfit(
+                  color: _selectedInterests.length >= maxInterestsAllowed ? Colors.orange : Colors.grey[500],
+                  fontSize: 13,
+                ),
               ),
+              const SizedBox(height: 16),
+              
+              // Display each category
+              ...themedInterests.entries.map((category) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Category header
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10, top: 8),
+                      child: Text(
+                        category.key,
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: _darkText,
+                        ),
+                      ),
+                    ),
+                    // Category items
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 10,
+                      children: category.value.map((interest) {
+                        final isSelected = _selectedInterests.contains(interest);
+                        final canSelect = _selectedInterests.length < maxInterestsAllowed || isSelected;
+                        return GestureDetector(
+                          onTap: () {
+                            if (!canSelect && !isSelected) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('You can only select up to $maxInterestsAllowed passions'),
+                                  backgroundColor: Colors.orange,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                              return;
+                            }
+                            setState(() {
+                              if (isSelected) {
+                                _selectedInterests.remove(interest);
+                              } else {
+                                _selectedInterests.add(interest);
+                              }
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: isSelected ? _primaryColor : Colors.white,
+                              borderRadius: BorderRadius.circular(25),
+                              border: Border.all(
+                                color: isSelected ? _primaryColor : Colors.grey.shade300,
+                                width: 1.5,
+                              ),
+                              boxShadow: isSelected ? [
+                                BoxShadow(
+                                  color: _primaryColor.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ] : null,
+                            ),
+                            child: Text(
+                              interest,
+                              style: GoogleFonts.outfit(
+                                color: isSelected ? Colors.black : _darkText,
+                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                );
+              }).toList(),
               const SizedBox(height: 40),
 
               // --- Submit Button ---
