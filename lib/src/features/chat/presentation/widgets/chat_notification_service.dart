@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:friendify/main.dart'; // Import to access navigatorKey
+import 'package:friendify/src/core/utils/globals.dart'; // Import to access navigatorKey
 
 // Global Route Observer
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();

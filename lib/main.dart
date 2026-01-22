@@ -3,9 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:friendify/src/features/auth/presentation/widgets/auth_gate.dart';
 import 'package:friendify/src/features/chat/presentation/widgets/chat_notification_service.dart';
-
-// Global Navigator Key for Overlay Access
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+import 'package:friendify/src/core/utils/globals.dart'; // Import Global Key
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
