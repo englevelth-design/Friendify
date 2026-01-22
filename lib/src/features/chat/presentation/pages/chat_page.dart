@@ -137,9 +137,21 @@ class _ChatPageState extends State<ChatPage> with RouteAware { // Add RouteAware
 
   String _formatTime(String timestamp) {
     final dt = DateTime.parse(timestamp).toLocal();
-    final hour = dt.hour.toString().padLeft(2, '0');
-    final minute = dt.minute.toString().padLeft(2, '0');
-    return "$hour:$minute";
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final dateToCheck = DateTime(dt.year, dt.month, dt.day);
+
+    final timeStr = "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+
+    if (dateToCheck == today) {
+      return timeStr;
+    } else if (dateToCheck == yesterday) {
+      return "Yesterday $timeStr";
+    } else {
+      // Simple dd/MM format for older dates
+      return "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')} $timeStr";
+    }
   }
 
 
