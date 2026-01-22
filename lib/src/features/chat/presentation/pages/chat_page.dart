@@ -137,20 +137,30 @@ class _ChatPageState extends State<ChatPage> with RouteAware { // Add RouteAware
 
   String _formatTime(String timestamp) {
     final dt = DateTime.parse(timestamp).toLocal();
+    final hour = dt.hour.toString().padLeft(2, '0');
+    final minute = dt.minute.toString().padLeft(2, '0');
+    return "$hour:$minute";
+  }
+  
+  bool _isSameDay(String t1, String t2) {
+    final d1 = DateTime.parse(t1).toLocal();
+    final d2 = DateTime.parse(t2).toLocal();
+    return d1.year == d2.year && d1.month == d2.month && d1.day == d2.day;
+  }
+  
+  String _getDateHeader(String timestamp) {
+    final dt = DateTime.parse(timestamp).toLocal();
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final dateToCheck = DateTime(dt.year, dt.month, dt.day);
 
-    final timeStr = "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
-
     if (dateToCheck == today) {
-      return timeStr;
+      return "Today";
     } else if (dateToCheck == yesterday) {
-      return "Yesterday $timeStr";
+      return "Yesterday";
     } else {
-      // Simple dd/MM format for older dates
-      return "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')} $timeStr";
+      return "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}";
     }
   }
 
@@ -209,40 +219,89 @@ class _ChatPageState extends State<ChatPage> with RouteAware { // Add RouteAware
                     final msg = messages[index];
                     final isMe = msg['sender_id'] == _myId;
                     
-                    return Align(
-                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          // Me: Neon, Other: White (requested)
-                          color: isMe ? const Color(0xFFD4FF00) : Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: isMe ? null : [
-                            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, spreadRadius: 1)
-                          ]
-                        ),
-                        child: Column(
-                          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              msg['content'],
-                              style: TextStyle(
-                                color: Colors.black, 
-                                fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
-                              ),
+                    // Date Header Logic
+                    final nextMsg = index + 1 < messages.length ? messages[index + 1] : null;
+                    bool showHeader = false;
+                    
+                    if (nextMsg == null) {
+                      // Oldest message always gets a header
+                      showHeader = true; 
+                    } else {
+                      // If the day changed compared to the older message
+                      showHeader = !_isSameDay(msg['created_at'], nextMsg['created_at']);
+                    }
+                    
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Because list is reversed, "Above" the message is visually "Before" it in the Column
+                        // BUT in reverse list, item N is visually above item N-1 ?
+                        // No. Item 0 is bottom. Item 1 is above it.
+                        // We decided: Header of "Today" goes on the OLDEST message of Today.
+                        // Wait. In reversed list:
+                        // Msg A (14:00, Idx 0) -> Newest
+                        // Msg B (13:00, Idx 1) -> Oldest (Last of Today group?)
+                        // Msg C (Yesterday, Idx 2)
+                        
+                        // Logic: Compare Idx 1 (Msg B) with Idx 2 (Msg C). Different?
+                        // Yes. So Msg B gets "Today" header.
+                        // Where do we put it?
+                        // Visually ABOVE Msg B.
+                        // So in Column([Header, MsgB]).
+                        if (showHeader) 
+                          Padding(
+                             padding: const EdgeInsets.symmetric(vertical: 16),
+                             child: Center(
+                               child: Container(
+                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                 decoration: BoxDecoration(
+                                   color: Colors.grey[200],
+                                   borderRadius: BorderRadius.circular(12),
+                                 ),
+                                 child: Text(
+                                   _getDateHeader(msg['created_at']),
+                                   style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.bold),
+                                 ),
+                               ),
+                             ),
+                          ),
+
+                        Align(
+                          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              // Me: Neon, Other: White (requested)
+                              color: isMe ? const Color(0xFFD4FF00) : Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: isMe ? null : [
+                                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, spreadRadius: 1)
+                              ]
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _formatTime(msg['created_at']),
-                              style: TextStyle(
-                                color: Colors.black.withOpacity(0.5),
-                                fontSize: 10,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  msg['content'],
+                                  style: TextStyle(
+                                    color: Colors.black, 
+                                    fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _formatTime(msg['created_at']), // Just HH:mm
+                                  style: TextStyle(
+                                    color: Colors.black.withOpacity(0.5),
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     );
                   },
                 );
