@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:friendify/src/core/services/match_service.dart';
+import 'package:friendify/src/features/chat/presentation/widgets/chat_notification_service.dart'; // Import Tracker
 import 'chat_page.dart';
 
 class ChatListPage extends StatefulWidget {
@@ -20,6 +21,22 @@ class _ChatListPageState extends State<ChatListPage> {
   void initState() {
     super.initState();
     _loadMatches();
+    _setupRealtimeSubscription();
+  }
+  
+  // Dispose removed because we don't manage tracker here anymore (IndexStack keeps it alive)
+
+
+  void _setupRealtimeSubscription() {
+    // Listen for ANY new messages to refresh the list orders/unread counts
+    Supabase.instance.client.channel('public:messages').onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'messages',
+      callback: (payload) {
+        if (mounted) _loadMatches();
+      },
+    ).subscribe();
   }
 
   Future<void> _loadMatches() async {
@@ -49,6 +66,8 @@ class _ChatListPageState extends State<ChatListPage> {
           final updatedMatch = Map<String, dynamic>.from(match);
           updatedMatch['last_message'] = res['content'];
           updatedMatch['last_time'] = res['created_at'];
+          updatedMatch['last_msg_is_read'] = res['is_read'] ?? true; 
+          updatedMatch['last_msg_sender'] = res['sender_id'];
           activeChats.add(updatedMatch);
         }
       }));
@@ -150,9 +169,15 @@ class _ChatListPageState extends State<ChatListPage> {
                                   return Container(
                                     margin: const EdgeInsets.only(bottom: 8),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFF1FFAB).withOpacity(0.6), // Slightly Lime Glass
+                                      // UNREAD LOGIC: If I am receiver AND it is NOT read -> Darker Neon Green
+                                      color: _isUnread(entry.value)
+                                         ? const Color(0xFFB2FF00) // Darker Neon Green for Unread
+                                         : const Color(0xFFF1FFAB).withOpacity(0.6), // Standard Lime Glass
                                       borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: Colors.white, width: 1),
+                                      border: Border.all(
+                                        color: _isUnread(entry.value) ? Colors.black26 : Colors.white, 
+                                        width: _isUnread(entry.value) ? 0 : 1
+                                      ),
                                     ),
                                     child: _buildMessageTile(entry.value, entry.key),
                                   );
@@ -262,6 +287,9 @@ class _ChatListPageState extends State<ChatListPage> {
         timeDisplay = "${diff.inDays}d";
       }
     }
+
+    final isUnread = _isUnread(profile);
+
     
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -281,16 +309,16 @@ class _ChatListPageState extends State<ChatListPage> {
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black),
       ),
       subtitle: Text(
-        lastMessage,
+        isUnread ? "New Message" : lastMessage,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           color: lastMessage == "Start a conversation..." 
               ? Colors.black54 
               : Colors.black87,
-          fontWeight: lastMessage == "Start a conversation..." 
-              ? FontWeight.normal 
-              : FontWeight.w500 
+          fontWeight: (isUnread || lastMessage != "Start a conversation...") 
+              ? FontWeight.bold // Bold if unread or active
+              : FontWeight.normal 
         ),
       ),
       trailing: Column(
@@ -305,6 +333,17 @@ class _ChatListPageState extends State<ChatListPage> {
     );
   }
 
+  bool _isUnread(Map<String, dynamic> profile) {
+    // It is unread IF: 
+    // 1. The last message sender is NOT me (i.e. it's them)
+    // 2. The is_read flag is false
+    final myId = Supabase.instance.client.auth.currentUser!.id;
+    final lastMsgSender = profile['last_msg_sender'];
+    final isRead = profile['last_msg_is_read'] as bool? ?? true;
+    
+    return (lastMsgSender != myId && !isRead);
+  }
+
   void _openChat(Map<String, dynamic> profile) {
      final imageUrl = (profile['image_urls'] as List?)?.firstOrNull;
      Navigator.of(context).push(
@@ -315,6 +354,9 @@ class _ChatListPageState extends State<ChatListPage> {
           targetUserImage: imageUrl,
         ),
       ),
-    );
+    ).then((_) {
+      // Refresh list when returning from chat (to clear unread status)
+      _loadMatches();
+    });
   }
 }

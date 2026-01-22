@@ -7,6 +7,7 @@ import 'package:friendify/src/features/game/presentation/pages/firefly_game_page
 import 'package:friendify/src/features/matches/presentation/pages/recent_matches_page.dart';
 import 'package:friendify/src/features/chat/presentation/pages/chat_list_page.dart';
 import 'package:friendify/src/features/profile/presentation/pages/profile_page.dart';
+import 'package:friendify/src/features/chat/presentation/widgets/chat_notification_service.dart'; // Import Tracker
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -28,6 +29,13 @@ class _MainPageState extends State<MainPage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // Initialize Tracker State
+    ChatPageTracker.isChatListActive = (_currentIndex == 3);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -44,7 +52,11 @@ class _MainPageState extends State<MainPage> {
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
+          onTap: (index) {
+            setState(() => _currentIndex = index);
+            // Update Notification Tracker (Index 3 is Chat List)
+            ChatPageTracker.isChatListActive = (index == 3);
+          },
           backgroundColor: Colors.white.withOpacity(0.8), 
           type: BottomNavigationBarType.fixed, 
           selectedItemColor: Colors.black, 

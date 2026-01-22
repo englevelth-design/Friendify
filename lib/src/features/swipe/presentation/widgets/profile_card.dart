@@ -62,12 +62,16 @@ class ProfileCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      profile.name,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    Flexible(
+                      child: Text(
+                        profile.name,
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Text(

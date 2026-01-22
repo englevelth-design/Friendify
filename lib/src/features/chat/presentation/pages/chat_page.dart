@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:friendify/src/features/auth/presentation/widgets/neon_text_field.dart';
 import 'package:friendify/src/features/profile/presentation/pages/profile_page.dart';
+import 'package:friendify/src/features/chat/presentation/widgets/chat_notification_service.dart';
+import 'package:friendify/main.dart'; // import for routeObserver access if public, or move routeObserver to separate file?
+// Actually routeObserver is in ChatNotificationService file or main? 
+// In previous step I put it in ChatNotificationService file as global val. Let's import that file.
 
 class ChatPage extends StatefulWidget {
   final String targetUserId;
@@ -19,14 +23,63 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ChatPageState extends State<ChatPage> with RouteAware { // Add RouteAware
   final _messageController = TextEditingController();
   late final Stream<List<Map<String, dynamic>>> _messagesStream;
   final _myId = Supabase.instance.client.auth.currentUser!.id;
 
   @override
+  void didChangeDependencies() {
+     super.didChangeDependencies();
+     routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    // If we are leaving, clear the tracker IF it was us
+    if (ChatPageTracker.activeChatUserId == widget.targetUserId) {
+      ChatPageTracker.activeChatUserId = null;
+    }
+    super.dispose();
+  }
+
+  @override
+  void didPush() {
+    // When entered
+    ChatPageTracker.activeChatUserId = widget.targetUserId;
+    _markAsRead();
+  }
+
+  @override
+  void didPopNext() {
+    // When returning from another screen
+    ChatPageTracker.activeChatUserId = widget.targetUserId;
+    _markAsRead();
+  }
+  
+  Future<void> _markAsRead() async {
+    try {
+      // Update all messages from THIS sender to ME as read
+      await Supabase.instance.client
+          .from('messages')
+          .update({'is_read': true})
+          .match({
+            'sender_id': widget.targetUserId,
+            'receiver_id': _myId,
+            'is_read': false, // Optimization: only update unread ones
+          });
+    } catch (e) {
+      // silent error
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
+    // Also set active user here just in case, though didPush covers it
+    // ChatPageTracker.activeChatUserId = widget.targetUserId; 
+    
     _messagesStream = Supabase.instance.client
         .from('messages')
         .stream(primaryKey: ['id'])
@@ -44,6 +97,24 @@ class _ChatPageState extends State<ChatPage> {
               return bTime.compareTo(aTime); 
             });
             
+            // SIDE EFFECT: Mark as read if a new message comes in while we are here!
+            // BUT: This stream fires for every change.
+            // We should check if there are unread messages from them and mark them.
+            // Better to do this carefully to avoid infinite loops if the "update" triggers the stream again.
+            // .stream() listens to changes. If we update 'is_read', it triggers again.
+            // Infinite loop risk? 
+            // The Update changes 'is_read'. The Stream result contains 'is_read'.
+            // Yes, risk.
+            // Solution: 
+            // 1. Only mark read if we find unread messages in the list.
+            // 2. The update will trigger stream again, but this time 'is_read' will be true, so we won't update again.
+            
+            final unreads = filtered.where((m) => m['sender_id'] == widget.targetUserId && m['is_read'] == false).toList();
+            if (unreads.isNotEmpty) {
+               // Defer to next frame to avoid "setState during build" or similar issues if map is called during build
+               Future.microtask(() => _markAsRead());
+            }
+
             return filtered;
         });
   }
@@ -58,6 +129,7 @@ class _ChatPageState extends State<ChatPage> {
         'sender_id': _myId,
         'receiver_id': widget.targetUserId,
         'content': text,
+        'is_read': false, // Default, but good to be explicit
       });
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to send')));

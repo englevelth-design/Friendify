@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:friendify/src/features/auth/presentation/widgets/auth_gate.dart';
+import 'package:friendify/src/features/chat/presentation/widgets/chat_notification_service.dart';
+
+// Global Navigator Key for Overlay Access
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,7 +60,12 @@ class FriendifyApp extends StatelessWidget {
         ),
       ),
       // GLOBAL GRADIENT FIX: Applies to ALL screens (Auth, Main, Settings, etc.)
+      navigatorKey: navigatorKey, // Assign the key
+      navigatorObservers: [routeObserver],
       builder: (context, child) {
+        // Initialize Notification Service once
+        ChatNotificationService().initialize();
+        
         return Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
