@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:friendify/src/features/profile/presentation/pages/edit_profile_page.dart';
 import 'package:friendify/src/features/auth/presentation/pages/login_page.dart';
 import 'package:friendify/src/features/auth/presentation/widgets/auth_gate.dart';
+import 'package:friendify/src/features/profile/presentation/widgets/image_viewer_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final String? userId; // If null, assume current user (Viewer Mode vs Owner Mode)
@@ -112,54 +113,57 @@ class _ProfilePageState extends State<ProfilePage> {
                 // The Glowing Avatar (Overlapping bottom)
                 Positioned(
                   bottom: -60,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                       Container(
-                         width: 140,
-                         height: 140,
-                         decoration: BoxDecoration(
-                           shape: BoxShape.circle,
-                           boxShadow: [
-                             BoxShadow(
-                               color: const Color(0xFFD4FF00).withOpacity(0.6),
-                               blurRadius: 40,
-                               spreadRadius: 2,
-                             )
-                           ],
-                         ),
-                       ),
-                       Hero(
-                         tag: 'profile_avatar',
-                         child: Container(
-                           width: 130,
-                           height: 130,
+                  child: GestureDetector(
+                    onTap: imageUrl != null ? () => openImageViewer(context, imageUrl, heroTag: 'profile_avatar') : null,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                         Container(
+                           width: 140,
+                           height: 140,
                            decoration: BoxDecoration(
                              shape: BoxShape.circle,
-                             border: Border.all(color: Colors.white, width: 5), // White border
-                             image: imageUrl != null 
-                                 ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover)
+                             boxShadow: [
+                               BoxShadow(
+                                 color: const Color(0xFFD4FF00).withOpacity(0.6),
+                                 blurRadius: 40,
+                                 spreadRadius: 2,
+                               )
+                             ],
+                           ),
+                         ),
+                         Hero(
+                           tag: 'profile_avatar',
+                           child: Container(
+                             width: 130,
+                             height: 130,
+                             decoration: BoxDecoration(
+                               shape: BoxShape.circle,
+                               border: Border.all(color: Colors.white, width: 5),
+                               image: imageUrl != null 
+                                   ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover)
+                                   : null,
+                               color: Colors.grey[200],
+                             ),
+                             child: imageUrl == null 
+                                 ? const Icon(Icons.person, size: 60, color: Colors.grey)
                                  : null,
-                             color: Colors.grey[200],
                            ),
-                           child: imageUrl == null 
-                               ? const Icon(Icons.person, size: 60, color: Colors.grey)
-                               : null,
                          ),
-                       ),
-                       Positioned(
-                         bottom: 10,
-                         right: 10,
-                         child: Container(
-                           padding: const EdgeInsets.all(4),
-                           decoration: const BoxDecoration(
-                             color: Colors.blueAccent,
-                             shape: BoxShape.circle,
+                         Positioned(
+                           bottom: 10,
+                           right: 10,
+                           child: Container(
+                             padding: const EdgeInsets.all(4),
+                             decoration: const BoxDecoration(
+                               color: Colors.blueAccent,
+                               shape: BoxShape.circle,
+                             ),
+                             child: const Icon(Icons.check, size: 16, color: Colors.white),
                            ),
-                           child: const Icon(Icons.check, size: 16, color: Colors.white),
-                         ),
-                       )
-                    ],
+                         )
+                      ],
+                    ),
                   ),
                 ),
               ],

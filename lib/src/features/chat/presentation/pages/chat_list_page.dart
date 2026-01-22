@@ -134,12 +134,47 @@ class _ChatListPageState extends State<ChatListPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 2. NEW MATCHES (Horizontal Scroll)
+                      // 2. NEW FIREFLY FRIENDS (Horizontal Scroll)
                       // Only show if there ARE new matches
                       if (_newMatches.isNotEmpty) ...[
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: const Text("New Matches", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                          child: Row(
+                            children: [
+                              const Text(
+                                "New Firefly Friends",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.black87,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFD4FF00),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFD4FF00).withOpacity(0.4),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  '${_newMatches.length}',
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 16),
                         SizedBox(
@@ -147,10 +182,9 @@ class _ChatListPageState extends State<ChatListPage> {
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsets.symmetric(horizontal: 24),
-                            itemCount: _newMatches.length + 1, 
+                            itemCount: _newMatches.length,
                             itemBuilder: (context, index) {
-                              if (index == 0) return _buildNewMatchItem(null, true);
-                              return _buildNewMatchItem(_newMatches[index - 1], false);
+                              return _buildNewMatchItem(_newMatches[index], false);
                             },
                           ),
                         ),

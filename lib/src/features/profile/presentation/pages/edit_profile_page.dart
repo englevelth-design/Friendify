@@ -97,12 +97,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
             padding: const EdgeInsets.all(24),
             children: [
               Center(
-                child: Hero(
-                  tag: 'profile_avatar', // Shared Transition
-                  child: UserAvatar(
-                    imageUrl: _imageUrl,
-                    onUpload: (url) => setState(() => _imageUrl = url),
-                  ),
+                child: UserAvatar(
+                  imageUrl: _imageUrl,
+                  onUpload: (url) => setState(() => _imageUrl = url),
                 ),
               ),
               const SizedBox(height: 32),
